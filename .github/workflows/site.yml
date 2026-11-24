@@ -1,0 +1,64 @@
+name: Build
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/15 * * * *'
+permissions:
+  contents: read
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.s.outputs.sha }}
+      hit: ${{ steps.c.outputs.cache-hit }}
+    steps:
+      - id: s
+        run: echo "sha=$(git ls-remote https://github.com/oilgaterealty/oilgate-commercial.git refs/heads/main | cut -f1)" >> "$GITHUB_OUTPUT"
+      - id: c
+        uses: actions/cache/restore@v4
+        with:
+          path: built.txt
+          key: built-${{ steps.s.outputs.sha }}
+          lookup-only: true
+  build:
+    needs: check
+    if: needs.check.outputs.hit != 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: oilgaterealty/oilgate-commercial
+          ref: ${{ needs.check.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+        env:
+          VITE_SITE_KIND: owner
+      - run: rm -f dist/CNAME
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+  deploy:
+    needs: [check, build]
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+    steps:
+      - uses: actions/deploy-pages@v4
+      - run: echo "${{ needs.check.outputs.sha }}" > built.txt
+      - uses: actions/cache/save@v4
+        with:
+          path: built.txt
+          key: built-${{ needs.check.outputs.sha }}
