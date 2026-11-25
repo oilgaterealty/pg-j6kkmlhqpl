@@ -42,6 +42,7 @@ jobs:
       - run: npm run build
         env:
           VITE_SITE_KIND: owner
+          VITE_GUEST_SITE: ${{ vars.GUEST_SITE }}
       - run: rm -f dist/CNAME
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
