@@ -43,6 +43,7 @@ jobs:
         env:
           VITE_SITE_KIND: owner
           VITE_GUEST_SITE: ${{ vars.GUEST_SITE }}
+          VITE_FRAME_PARENT: ${{ vars.FRAME_PARENT }}
       - run: rm -f dist/CNAME
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
